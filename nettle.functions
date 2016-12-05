@@ -65,14 +65,14 @@ libertine_compile_nettle()
 		libtoolize --install --force --verbose
 		autoreconf --install --force --verbose
 		
-		core_variable_setVariableIfUnset nettle_enableAesNi 'false'
-		core_variable_setVariableIfUnset nettle_enableArmNeon 'false'
+		core_variable_setVariableIfUnset libertine_nettle_enableAesNi 'false'
+		core_variable_setVariableIfUnset libertine_nettle_enableArmNeon 'false'
 		
 		set -- --disable-openssl --disable-gcov --disable-fat
-		if $nettle_enableAesNi; then
+		if $libertine_nettle_enableAesNi; then
 			set -- "$@" --enable-x86-aesni
 		fi
-		if $nettle_enableArmNeon; then
+		if $libertine_nettle_enableArmNeon; then
 			set -- "$@" --enable-arm-neon
 		else
 			set -- "$@" --disable-arm-neon
