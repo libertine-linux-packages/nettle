@@ -1,0 +1,92 @@
+# This file is part of libertine linux's package nettle. It is subject to the license terms in the COPYRIGHT file found in the top-level directory of this distribution and at https://raw.githubusercontent.com/libertine-linux-packages/nettle/master/COPYRIGHT. No part of libertine linux's package nettle, including this file, may be copied, modified, propagated, or distributed except according to the terms contained in the COPYRIGHT file.
+# Copyright © 2016 The developers of libertine linux's package nettle. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/libertine-linux-packages/nettle/master/COPYRIGHT.
+
+
+variant=upstream
+
+depends gmp
+
+depends build_ccache
+build_needs ccache
+
+depends build_gnumake
+build_needs make
+
+depends build_slibtool
+build_needs clibtool-static libtoolize realpath
+
+depends build_perl
+build_needs perl
+
+depends build_autoconf
+build_needs autoconf autoheader autom4te autoreconf autoscan autoupdate ifnames
+
+depends build_automake
+build_needs automake aclocal
+
+depends build_gnum4
+build_needs m4
+
+depends build_musl_cross_make_host
+build_needs "$libertine_host"-cc "$libertine_host"-gcc "$libertine_host"-ar "$libertine_host"-ld "$libertine_host"-ranlib "$libertine_host"-strip "$libertine_host"-objdump
+
+depends build_musl_cross_make_build
+build_needs "$libertine_build"-cc "$libertine_build"-gcc "$libertine_build"-ar "$libertine_build"-ld "$libertine_build"-ranlib "$libertine_build"-nm
+
+depends build_busybox
+build_needs expr install sort ls sleep head strings basename true
+
+depends build_gnuconfig
+
+build_needs mkdir cp
+libertine_compile_nettle()
+{
+	pushd "$(libertine_public_sourcePath)"
+		
+		libertine_public_populateInputSysroot gmp
+	
+		libertine_public_autoconf_replaceWithKnownVersionOfConfigGuess ./
+		libertine_public_autoconf_replaceWithKnownVersionOfConfigSub ./
+		libertine_public_autoconf_replaceWithKnownVersionOfInstallSh ./
+
+		libertine_public_autoconf_adjustConfigureAcToRemoveGnuTextCruftBeforeAutoconf
+		
+		# Stupid naive non-cross-compile shit:-
+		# LSH_RPATH_INIT([`echo $with_lib_path | sed 's/:/ /g'` \
+		#     `echo $exec_prefix | sed "s@^NONE@$prefix/lib@g" | sed "s@^NONE@$ac_default_prefix/lib@g"` \
+		#     /usr/local/lib /sw/local/lib /sw/lib \
+		#     /usr/gnu/lib /opt/gnu/lib /sw/gnu/lib /usr/freeware/lib /usr/pkg/lib])
+		# Of course, using a daft 80 column limit turns the simple into an insane multiline...
+		cp configure.ac configure.ac.orig
+		cat configure.ac.orig | tr '\n' '\r' | sed -e 's/ \\\r//g' | tr '\r' '\n' | sed -e 's,LSH_RPATH_INIT(\[.*$,LSH_RPATH_INIT([/usr/lib]),g' >configure.ac
+		
+		libertine_public_addOrReplaceBinaryInPath cc "$(_libertine_compile_pathsPATH)"/"$libertine_build"-cc
+		
+		libtoolize --install --force --verbose
+		autoreconf --install --force --verbose
+		
+		core_variable_setVariableIfUnset nettle_enableAesNi 'false'
+		core_variable_setVariableIfUnset nettle_enableArmNeon 'false'
+		
+		set -- --disable-openssl --disable-gcov --disable-fat
+		if $nettle_enableAesNi; then
+			set -- "$@" --enable-x86-aesni
+		fi
+		if $nettle_enableArmNeon; then
+			set -- "$@" --enable-arm-neon
+		else
+			set -- "$@" --disable-arm-neon
+		fi
+		
+		libertine_public_autoconf_modernAutoconfConfigure "$@"
+	
+		libertine_public_autoconf_removePoToRemoveGnuTextCruftBeforeMake
+
+		libertine_public_ccache_createSymlinks
+		
+		libertine_public_make
+		
+		libertine_public_make DESTDIR="$(libertine_public_outputHostSysrootPath)" install
+		
+	popd
+}
