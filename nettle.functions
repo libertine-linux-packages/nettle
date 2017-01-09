@@ -38,7 +38,7 @@ build_needs expr install sort ls sleep head strings basename true
 
 depends build_gnuconfig
 
-build_needs mkdir cp
+build_needs mkdir cp cat tr sed
 libertine_compile_nettle()
 {
 	pushd "$(libertine_public_sourcePath)"
@@ -60,7 +60,7 @@ libertine_compile_nettle()
 		cp configure.ac configure.ac.orig
 		cat configure.ac.orig | tr '\n' '\r' | sed -e 's/ \\\r//g' | tr '\r' '\n' | sed -e 's,LSH_RPATH_INIT(\[.*$,LSH_RPATH_INIT([/usr/lib]),g' >configure.ac
 		
-		libertine_public_addOrReplaceBinaryInPath cc "$(_libertine_compile_pathsPATH)"/"$libertine_build"-cc
+		libertine_public_addOrReplaceBinaryInPath cc "$libertine_build"-cc
 		
 		libtoolize --install --force --verbose
 		autoreconf --install --force --verbose
