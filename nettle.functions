@@ -69,10 +69,14 @@ libertine_compile_nettle()
 		core_variable_setVariableIfUnset libertine_nettle_enableArmNeon 'false'
 		
 		set -- --disable-openssl --disable-gcov --disable-fat
-		if $libertine_nettle_enableAesNi; then
-			set -- "$@" --enable-x86-aesni
+		
+		if $libertine_hostHasAesAcceleration; then
+			if [ "$libertine_hostLinuxSpecific" = 'x86_64' ]; then
+				set -- "$@" --enable-x86-aesni
+			fi
 		fi
-		if $libertine_nettle_enableArmNeon; then
+				
+		if [ "$libertine_hostFpuMode" = 'neon' ]; then
 			set -- "$@" --enable-arm-neon
 		else
 			set -- "$@" --disable-arm-neon
